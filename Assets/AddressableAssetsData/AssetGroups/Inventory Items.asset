@@ -1,0 +1,43 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: bbb281ee3bf0b054c82ac2347e9e782c, type: 3}
+  m_Name: Inventory Items
+  m_EditorClassIdentifier: 
+  m_GroupName: Inventory Items
+  m_Data:
+    m_SerializedData: []
+  m_GUID: dd25db6221211a24d979b31d50184201
+  m_SerializeEntries:
+  - m_GUID: f3d193f927f5b554aa865c1e645f7457
+    m_Address: Assets/Weapons/Prefabs/BossSword.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    m_MainAsset: {fileID: 0}
+    m_TargetAsset: {fileID: 0}
+  - m_GUID: 24a423ef19c294449b84f4728c309501
+    m_Address: Assets/Weapons/Prefabs/Shield.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    m_MainAsset: {fileID: 0}
+    m_TargetAsset: {fileID: 0}
+  - m_GUID: 8d937e227d331c74d9136971897d6aeb
+    m_Address: Assets/Weapons/Prefabs/Sword.prefab
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    m_MainAsset: {fileID: 0}
+    m_TargetAsset: {fileID: 0}
+  m_ReadOnly: 0
+  m_Settings: {fileID: 11400000, guid: 99c87e75b523bd14e9f70b3966d71316, type: 2}
+  m_SchemaSet:
+    m_Schemas:
+    - {fileID: 11400000, guid: 8d027989ad7cf8948af277ba1b6a08a2, type: 2}
+    - {fileID: 11400000, guid: d0be1143ad407f94d94fa33fb4d9341b, type: 2}
