@@ -1,6 +1,6 @@
 # AddressablesMemoryOptimizations
 
-*Link blog post*
+[Official Unity Blog post](https://blogs.unity3d.com/2021/03/31/tales-from-the-optimization-trenches-saving-memory-with-addressables/)
 
 A small sample project demonstrating how organized AssetBundles can reduce your Unity project's runtime memory.
 
