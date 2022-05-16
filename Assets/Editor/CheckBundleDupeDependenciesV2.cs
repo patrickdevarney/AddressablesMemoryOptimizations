@@ -40,7 +40,7 @@ class CheckBundleDupeDependenciesV2 : BundleRuleBase
     [SerializeField]
     internal Dictionary<List<string>, List<string>> duplicateAssetsAndParents = new Dictionary<List<string>, List<string>>();
 
-    // The fucnction that is called when the user "Analyze Selected Rules" in the Analyze window
+    // The function that is called when the user clicks "Analyze Selected Rules" in the Analyze window
     public override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
     {
         ClearAnalysis();
@@ -198,7 +198,7 @@ class CheckBundleDupeDependenciesV2 : BundleRuleBase
         }
     }
 
-    // The function that is called when the user clicks the "Fix Issues" button in the Analyze window
+    // The function that is called when the user clicks "Fix Issues" in the Analyze window
     public override void FixIssues(AddressableAssetSettings settings)
     {
         // If we have no duplicate data, run the check again
