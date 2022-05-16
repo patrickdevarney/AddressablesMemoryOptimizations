@@ -15,9 +15,9 @@ using UnityEngine;
 using UnityEditor;
 using UnityEditor.AddressableAssets.Build.AnalyzeRules;
 
-class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
+class CheckBundleDupeDependenciesV2 : BundleRuleBase
 {
-    internal struct CheckDupeResult
+    struct DuplicateResult
     {
         public AddressableAssetGroup Group;
         public string DuplicatedFile;
@@ -25,11 +25,13 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
         public GUID DuplicatedGroupGuid;
     }
 
+    // Return true because we have added an automated way of fixing these problems with the FixIssues() function
     public override bool CanFix
     {
         get { return true; }
     }
 
+    // The name that appears in the Editor UI
     public override string ruleName
     { get { return "Check Duplicate Bundle Dependencies V2"; } }
 
@@ -38,6 +40,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
     [SerializeField]
     internal Dictionary<List<string>, List<string>> duplicateAssetsAndParents = new Dictionary<List<string>, List<string>>();
 
+    // The fucnction that is called when the user "Analyze Selected Rules" in the Analyze window
     public override List<AnalyzeResult> RefreshAnalysis(AddressableAssetSettings settings)
     {
         ClearAnalysis();
@@ -46,7 +49,10 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
 
     List<AnalyzeResult> CheckForDuplicateDependencies(AddressableAssetSettings settings)
     {
+        // Create a container to store all our AnalyzeResults
         List<AnalyzeResult> retVal = new List<AnalyzeResult>();
+
+        // Quit if the opened scene is not saved
         if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
         {
             Debug.LogError("Cannot run Analyze with unsaved scenes");
@@ -54,35 +60,41 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
             return retVal;
         }
 
+        // Internal Addressables function that populates m_AllBundleInputDefs with what all our bundles will look like
         CalculateInputDefinitions(settings);
 
-        if (m_AllBundleInputDefs.Count > 0)
+        // Early return if we found no bundles to build
+        if (m_AllBundleInputDefs.Count <= 0)
         {
-            var context = GetBuildContext(settings);
-            ReturnCode exitCode = RefreshBuild(context);
-            if (exitCode < ReturnCode.Success)
-            {
-                Debug.LogError("Analyze build failed. " + exitCode);
-                retVal.Add(new AnalyzeResult { resultName = ruleName + "Analyze build failed. " + exitCode });
-                return retVal;
-            }
-
-            var implicitGuids = GetImplicitGuidToFilesMap();
-            var checkDupeResults = CalculateDuplicates(implicitGuids, context);
-            BuildImplicitDuplicatedAssetsSet(checkDupeResults);
-
-            retVal = (from issueGroup in m_AllIssues
-                      from bundle in issueGroup.Value
-                      from item in bundle.Value
-                      select new AnalyzeResult
-                      {
-                          resultName = ruleName + kDelimiter +
-                                               issueGroup.Key + kDelimiter +
-                                               ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
-                                               item,
-                          severity = MessageType.Warning
-                      }).ToList();
+            return retVal;
         }
+
+        var context = GetBuildContext(settings);
+        ReturnCode exitCode = RefreshBuild(context);
+        if (exitCode < ReturnCode.Success)
+        {
+            Debug.LogError("Analyze build failed. " + exitCode);
+            retVal.Add(new AnalyzeResult { resultName = ruleName + "Analyze build failed. " + exitCode });
+            return retVal;
+        }
+
+        var implicitGuids = GetImplicitGuidToFilesMap();
+
+        // Actually calculate the duplicates
+        var dupeResults = CalculateDuplicates(implicitGuids, context);
+        BuildImplicitDuplicatedAssetsSet(dupeResults);
+
+        retVal = (from issueGroup in m_AllIssues
+                  from bundle in issueGroup.Value
+                  from item in bundle.Value
+                  select new AnalyzeResult
+                  {
+                      resultName = ruleName + kDelimiter +
+                                           issueGroup.Key + kDelimiter +
+                                           ConvertBundleName(bundle.Key, issueGroup.Key) + kDelimiter +
+                                           item,
+                      severity = MessageType.Warning
+                  }).ToList();
 
         if (retVal.Count == 0)
             retVal.Add(noErrors);
@@ -90,8 +102,10 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
         return retVal;
     }
 
-    internal IEnumerable<CheckDupeResult> CalculateDuplicates(Dictionary<GUID, List<string>> implicitGuids, AddressableAssetsBuildContext aaContext)
+    IEnumerable<DuplicateResult> CalculateDuplicates(Dictionary<GUID, List<string>> implicitGuids, AddressableAssetsBuildContext aaContext)
     {
+        duplicateAssetsAndParents.Clear();
+
         //Get all guids that have more than one bundle referencing them
         IEnumerable<KeyValuePair<GUID, List<string>>> validGuids =
             from dupeGuid in implicitGuids
@@ -99,13 +113,16 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
             where IsValidPath(AssetDatabase.GUIDToAssetPath(dupeGuid.Key.ToString()))
             select dupeGuid;
 
-        // Key = bundle parents
+        // Key = a set of bundle parents
         // Value = asset paths that share the same bundle parents
-        duplicateAssetsAndParents.Clear();
+        // e.g. <{"bundle1", "bundle2"} , {"Assets/Sword_D.tif", "Assets/Sword_N.tif"}>
+
         foreach (var entry in validGuids)
         {
             string assetPath = AssetDatabase.GUIDToAssetPath(entry.Key.ToString());
+            // Grab the list of bundle parents
             List<string> assetParents = entry.Value;
+
             // Purge duplicate parents (assets inside a Scene can show multiple copies of the Scene AssetBundle as a parent)
             List<string> nonDupeParents = new List<string>();
             foreach (var parent in assetParents)
@@ -115,10 +132,12 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
                 nonDupeParents.Add(parent);
             }
             assetParents = nonDupeParents;
+
+            // Add this pair to the dictionary
             bool found = false;
-            // Try to find assetParents in existing dictionary
             foreach (var bundleParentSetup in duplicateAssetsAndParents.Keys)
             {
+                // If this set of bundle parents equals our set of bundle parents, add this asset to this dictionary entry
                 if (Enumerable.SequenceEqual(bundleParentSetup, assetParents))
                 {
                     duplicateAssetsAndParents[bundleParentSetup].Add(assetPath);
@@ -128,6 +147,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
             }
             if (!found)
             {
+                // We failed to find an existing set of matching bundle parents. Add a new entry
                 duplicateAssetsAndParents.Add(assetParents, new List<string>() { assetPath });
             }
         }
@@ -136,7 +156,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
             from guidToFile in validGuids
             from file in guidToFile.Value
 
-                //Get the files that belong to those guids
+            //Get the files that belong to those guids
             let fileToBundle = m_ExtractData.WriteData.FileToBundle[file]
 
             //Get the bundles that belong to those files
@@ -145,7 +165,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
             //Get the asset groups that belong to those bundles
             let selectedGroup = aaContext.Settings.FindGroup(findGroup => findGroup != null && findGroup.Guid == bundleToGroup)
 
-            select new CheckDupeResult
+            select new DuplicateResult
             {
                 Group = selectedGroup,
                 DuplicatedFile = file,
@@ -154,29 +174,31 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
             };
     }
 
-    internal void BuildImplicitDuplicatedAssetsSet(IEnumerable<CheckDupeResult> checkDupeResults)
+    void BuildImplicitDuplicatedAssetsSet(IEnumerable<DuplicateResult> dupeResults)
     {
-        foreach (var checkDupeResult in checkDupeResults)
+        foreach (var dupeResult in dupeResults)
         {
+            // Add the data to the AllIssues container which is shown in the Analyze window
             Dictionary<string, List<string>> groupData;
-            // Add the data to the AllIssues container for UI display
-            if (!m_AllIssues.TryGetValue(checkDupeResult.Group.Name, out groupData))
+            if (!m_AllIssues.TryGetValue(dupeResult.Group.Name, out groupData))
             {
                 groupData = new Dictionary<string, List<string>>();
-                m_AllIssues.Add(checkDupeResult.Group.Name, groupData);
+                m_AllIssues.Add(dupeResult.Group.Name, groupData);
             }
 
+            // TODO: why is this necessary?
             List<string> assets;
-            if (!groupData.TryGetValue(m_ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], out assets))
+            if (!groupData.TryGetValue(m_ExtractData.WriteData.FileToBundle[dupeResult.DuplicatedFile], out assets))
             {
                 assets = new List<string>();
-                groupData.Add(m_ExtractData.WriteData.FileToBundle[checkDupeResult.DuplicatedFile], assets);
+                groupData.Add(m_ExtractData.WriteData.FileToBundle[dupeResult.DuplicatedFile], assets);
             }
 
-            assets.Add(checkDupeResult.AssetPath);
+            assets.Add(dupeResult.AssetPath);
         }
     }
 
+    // The function that is called when the user clicks the "Fix Issues" button in the Analyze window
     public override void FixIssues(AddressableAssetSettings settings)
     {
         // If we have no duplicate data, run the check again
@@ -187,7 +209,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
         if (duplicateAssetsAndParents.Count == 0)
             return;
 
-        // Setup Addressables Group to store all our duplicate assets
+        // Setup a new Addressables Group to store all our duplicate assets
         string desiredGroupName = "Duplicate Assets Sorted By Label";
         AddressableAssetGroup group = settings.FindGroup(desiredGroupName);
         if (group == null)
@@ -204,6 +226,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
         foreach (var entry in duplicateAssetsAndParents)
         {
             EditorUtility.DisplayProgressBar("Setting up De-Duplication Group...", "Creating Label Group", ((float)bundleNumber) / duplicateAssetsAndParents.Count);
+            // Create a new Label
             string desiredLabelName = "Bundle" + bundleNumber;
             List<AddressableAssetEntry> entriesToAdd = new List<AddressableAssetEntry>();
             // Put each asset in the shared Group
@@ -221,7 +244,8 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.BatchModification, null, true, true);
     }
 
-    internal void SetLabelValueForEntries(AddressableAssetSettings settings, List<AddressableAssetEntry> entries, string label, bool value, bool postEvent = true)
+    // Helper function for adding labels to Addressable assets
+    void SetLabelValueForEntries(AddressableAssetSettings settings, List<AddressableAssetEntry> entries, string label, bool value, bool postEvent = true)
     {
         if (value)
             settings.AddLabel(label);
@@ -232,6 +256,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
         settings.SetDirty(AddressableAssetSettings.ModificationEvent.EntryModified, entries, postEvent, true);
     }
 
+    // The function that is run when the user clicks "Clear Selected Rules" in the Analyze window
     public override void ClearAnalysis()
     {
         m_AllIssues.Clear();
@@ -240,7 +265,7 @@ class CheckBundleDupeDependenciesV2 : MyBundleRuleBase
     }
 }
 
-
+// Boilerplate to add our rule to the AnalyzeSystem's list of rules
 [InitializeOnLoad]
 class RegisterCheckBundleDupeDependenciesV2
 {

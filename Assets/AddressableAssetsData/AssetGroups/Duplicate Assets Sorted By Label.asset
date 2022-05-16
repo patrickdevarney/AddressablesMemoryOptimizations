@@ -15,36 +15,28 @@ MonoBehaviour:
   m_GroupName: Duplicate Assets Sorted By Label
   m_Data:
     m_SerializedData: []
-  m_GUID: 5e0778dcaba1d254884e2b6d262961a5
+  m_GUID: 5abff8ef8feb2ff40bf97173d74669f7
   m_SerializeEntries:
   - m_GUID: 530fec31288b3514183ea010b38b36e1
     m_Address: Assets/Weapons/Sword/Textures/Sword_N.tif
     m_ReadOnly: 0
     m_SerializedLabels:
     - Bundle1
-    m_MainAsset: {fileID: 0}
-    m_TargetAsset: {fileID: 0}
   - m_GUID: a269cfc47281f3749a982c9a0ea65117
     m_Address: Assets/Weapons/Sword/Textures/Sword_D.tif
     m_ReadOnly: 0
     m_SerializedLabels:
     - Bundle1
-    m_MainAsset: {fileID: 0}
-    m_TargetAsset: {fileID: 0}
   - m_GUID: 5cdbb5effeab4db45a17845dd1d1289d
     m_Address: Assets/Weapons/Sword/Model/Sword_MD.fbx
     m_ReadOnly: 0
     m_SerializedLabels:
     - Bundle1
-    m_MainAsset: {fileID: 0}
-    m_TargetAsset: {fileID: 0}
   - m_GUID: ab3b772d9719bea4ca0228c4a76a4f3b
     m_Address: Assets/Weapons/MyStandardShader.shader
     m_ReadOnly: 0
     m_SerializedLabels:
     - Bundle2
-    m_MainAsset: {fileID: 0}
-    m_TargetAsset: {fileID: 0}
   m_ReadOnly: 0
   m_Settings: {fileID: 11400000, guid: 99c87e75b523bd14e9f70b3966d71316, type: 2}
   m_SchemaSet:
